@@ -1,8 +1,8 @@
 {
-  "name": "Unit Converter",
+  "name": "Composites Converter",
   "short_name": "Converter",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "/composites-converter/",
+  "scope": "/composites-converter/",
   "display": "standalone",
   "background_color": "#0b1220",
   "theme_color": "#111827",
