@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-/** ---- Constants ---- */
+/** ---- Constants (exact enough for shop work) ---- */
 const M2_PER_YD2 = 0.9144 * 0.9144;             // 0.83612736
 const M2_PER_FT2 = 0.3048 * 0.3048;             // 0.09290304
 const G_PER_OZ = 28.349523125;
@@ -14,22 +14,24 @@ const QT_TO_ML = 946.352946;
 const OZFL_TO_ML = 29.5735295625;
 const L_TO_ML = 1000;
 
-/** ---- Helpers ---- */
-function gsmToOzPerYd2(gsm: number) { return gsm * (1 / (G_PER_OZ / M2_PER_YD2)); }
-function ozPerYd2ToGsm(ozPerYd2: number) { return ozPerYd2 * (G_PER_OZ / M2_PER_YD2); }
-function gsmToOzPerFt2(gsm: number) { return gsm * (1 / (G_PER_OZ / M2_PER_FT2)); }
-function ozPerFt2ToGsm(ozPerFt2: number) { return ozPerFt2 * (G_PER_OZ / M2_PER_FT2); }
-
-function clampNum(s: string) {
-  if (s.trim() === "") return NaN;
-  const n = Number(s);
-  return Number.isFinite(n) ? n : NaN;
+/** ---- Textile areal weight conversions ---- */
+function gsmToOzPerYd2(gsm: number): number {
+  return gsm * (1 / (G_PER_OZ / M2_PER_YD2)); // ≈ gsm * 0.029493525
 }
-function fmt(n: number | string, decimals: number, trim = true): string {
+function ozPerYd2ToGsm(ozPerYd2: number): number {
+  return ozPerYd2 * (G_PER_OZ / M2_PER_YD2);  // ≈ oz/yd² * 33.9057475
+}
+function gsmToOzPerFt2(gsm: number): number {
+  return gsm * (1 / (G_PER_OZ / M2_PER_FT2)); // ≈ gsm * 0.0032770583
+}
+function ozPerFt2ToGsm(ozPerFt2: number): number {
+  return ozPerFt2 * (G_PER_OZ / M2_PER_FT2);  // ≈ oz/ft² * 305.1517273
+}
+
+function fmt(n: number | string, digits = 6): string {
   if (n === "" || Number.isNaN(Number(n))) return "";
   const x = typeof n === "number" ? n : Number(n);
-  const fixed = x.toFixed(decimals);
-  return trim ? parseFloat(fixed).toString() : fixed;
+  return Number.parseFloat(x.toPrecision(digits)).toString();
 }
 
 /** ---- UI ---- */
@@ -37,88 +39,86 @@ type Tab = "textile" | "roll" | "catalyst";
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("textile");
-  const [decimals, setDecimals] = useState<number>(3);
 
   return (
-    <main style={{ maxWidth: 820, margin: "0 auto", padding: 16, fontFamily: "system-ui" }}>
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        <h1 style={{ margin: 0 }}>Composites Converter</h1>
-        <label className="row" style={{ gridTemplateColumns: "auto auto" }}>
-          <span style={{ color: "#444" }}>Precision</span>
-          <select value={decimals} onChange={(e) => setDecimals(parseInt(e.target.value, 10))}>
-            {[0,1,2,3,4,5,6].map(d => <option key={d} value={d}>{d} decimals</option>)}
-          </select>
-        </label>
-      </header>
-
-      <nav style={{ display: "flex", gap: 8, margin: "12px 0 16px" }}>
-        <button onClick={() => setTab("textile")} disabled={tab==="textile"}>Textile Areal Weight</button>
-        <button onClick={() => setTab("roll")} disabled={tab==="roll"}>Roll Length</button>
-        <button onClick={() => setTab("catalyst")} disabled={tab==="catalyst"}>Catalyst % & Volumes</button>
+    <main style={{ maxWidth: 780, margin: "2rem auto", padding: 16, fontFamily: "system-ui" }}>
+      <h1>Composites Converter</h1>
+      <nav style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        <button onClick={() => setTab("textile")}>Textile Areal Weight</button>
+        <button onClick={() => setTab("roll")}>Roll Length</button>
+        <button onClick={() => setTab("catalyst")}>Catalyst % & Volumes</button>
       </nav>
 
       <section style={{ border: "1px solid #ccc", borderRadius: 8, padding: 16 }}>
-        {tab === "textile" && <TextilePane decimals={decimals} />}
-        {tab === "roll" && <RollPane decimals={decimals} />}
-        {tab === "catalyst" && <CatalystPane decimals={decimals} />}
+        {tab === "textile" && <TextilePane />}
+        {tab === "roll" && <RollPane />}
+        {tab === "catalyst" && <CatalystPane />}
       </section>
     </main>
   );
 }
 
-/** ---------- 1) Textile: bidirectional GSM ⇄ oz/yd² ⇄ oz/ft² ---------- */
-function TextilePane({ decimals }: { decimals: number }) {
-  const [source, setSource] = useState<"gsm" | "oy" | "of">("gsm");
-  const [gsmStr, setGsmStr] = useState("200");
-  const [oyStr, setOyStr] = useState("");  // oz/yd²
-  const [ofStr, setOfStr] = useState("");  // oz/ft²
+/** ---------- 1) Textile areal weight pane ---------- */
+function TextilePane() {
+  const [gsm, setGsm] = useState("200");
+  const [ozYd2, setOzYd2] = useState("");
+  const [ozFt2, setOzFt2] = useState("");
 
-  const values = useMemo(() => {
-    let gsm = NaN;
-    if (source === "gsm") gsm = clampNum(gsmStr);
-    if (source === "oy")  { const oy = clampNum(oyStr); if (Number.isFinite(oy)) gsm = ozPerYd2ToGsm(oy); }
-    if (source === "of")  { const of = clampNum(ofStr); if (Number.isFinite(of)) gsm = ozPerFt2ToGsm(of); }
-    if (!Number.isFinite(gsm)) return { gsm: NaN, oy: NaN, of: NaN };
-    return { gsm, oy: gsmToOzPerYd2(gsm), of: gsmToOzPerFt2(gsm) };
-  }, [source, gsmStr, oyStr, ofStr]);
+  // derive others from whichever changed last; simplest is to compute all from gsm and also allow reverse.
+  // Here we compute dynamically based on current inputs (if provided).
+  const derived = useMemo(() => {
+    const g = Number(gsm);
+    const oy = ozYd2 ? Number(ozYd2) : undefined;
+    const of = ozFt2 ? Number(ozFt2) : undefined;
+
+    if (!Number.isNaN(g) && g > 0 && !ozYd2 && !ozFt2) {
+      return {
+        from: "gsm",
+        gsm: g,
+        oy: gsmToOzPerYd2(g),
+        of: gsmToOzPerFt2(g),
+      };
+    }
+    if (oy !== undefined && !Number.isNaN(oy) && !ozFt2) {
+      const g2 = ozPerYd2ToGsm(oy);
+      return { from: "oy", gsm: g2, oy, of: gsmToOzPerFt2(g2) };
+    }
+    if (of !== undefined && !Number.isNaN(of)) {
+      const g3 = ozPerFt2ToGsm(of);
+      return { from: "of", gsm: g3, oy: gsmToOzPerYd2(g3), of };
+    }
+    // fallback: compute from gsm
+    const gF = Number.isNaN(g) ? 0 : g;
+    return { from: "gsm", gsm: gF, oy: gsmToOzPerYd2(gF), of: gsmToOzPerFt2(gF) };
+  }, [gsm, ozYd2, ozFt2]);
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
       <p><strong>Convert GSM ⇄ oz/yd² ⇄ oz/ft²</strong></p>
       <Row label="GSM">
-        <input
-          value={source === "gsm" ? gsmStr : fmt(values.gsm, decimals)}
-          onChange={(e) => { setSource("gsm"); setGsmStr(e.target.value); }}
-          inputMode="decimal"
-        />
+        <input value={gsm} onChange={(e) => { setGsm(e.target.value); setOzYd2(""); setOzFt2(""); }} inputMode="decimal" />
       </Row>
       <Row label="oz / yd²">
-        <input
-          value={source === "oy" ? oyStr : fmt(values.oy, decimals)}
-          onChange={(e) => { setSource("oy"); setOyStr(e.target.value); }}
-          inputMode="decimal"
-        />
+        <input value={ozYd2} onChange={(e) => { setOzYd2(e.target.value); setOzFt2(""); }} inputMode="decimal" placeholder={fmt(derived.oy)} />
       </Row>
       <Row label="oz / ft²">
-        <input
-          value={source === "of" ? ofStr : fmt(values.of, decimals)}
-          onChange={(e) => { setSource("of"); setOfStr(e.target.value); }}
-          inputMode="decimal"
-        />
+        <input value={ozFt2} onChange={(e) => { setOzFt2(e.target.value); setOzYd2(""); }} inputMode="decimal" placeholder={fmt(derived.of)} />
       </Row>
+
       <Summary>
-        <li>{fmt(values.gsm, decimals)} gsm ≈ {fmt(values.oy, decimals)} oz/yd² ≈ {fmt(values.of, decimals)} oz/ft²</li>
+        <li>{fmt(derived.gsm)} gsm ≈ {fmt(derived.oy)} oz/yd² ≈ {fmt(derived.of)} oz/ft²</li>
       </Summary>
     </div>
   );
 }
 
-/** ---------- 2) Roll length ---------- */
-function RollPane({ decimals }: { decimals: number }) {
+/** ---------- 2) Roll length pane ---------- */
+function RollPane() {
+  // Inputs
   const [areal, setAreal] = useState("200");      // gsm
-  const [rollWeight, setRollWeight] = useState("25");
+  const [rollWeight, setRollWeight] = useState("25"); // roll weight value
   const [rollWeightUnit, setRollWeightUnit] = useState<"kg" | "lb">("kg");
-  const [width, setWidth] = useState("50");
+  const [width, setWidth] = useState("50");       // width value
   const [widthUnit, setWidthUnit] = useState<"in" | "mm" | "cm" | "m">("in");
 
   const out = useMemo(() => {
@@ -133,6 +133,7 @@ function RollPane({ decimals }: { decimals: number }) {
       widthUnit === "mm" ? wv * MM_TO_M :
       widthUnit === "cm" ? wv * CM_TO_M : wv;
 
+    // Area (m²) = mass_g / gsm ; Length (m) = Area / width_m
     const area_m2 = mass_g / gsm;
     const length_m = area_m2 / width_m;
     const length_yd = length_m * M_TO_YD;
@@ -143,11 +144,13 @@ function RollPane({ decimals }: { decimals: number }) {
   return (
     <div style={{ display: "grid", gap: 12 }}>
       <p><strong>Linear yards/meters from roll weight, areal weight, and width</strong></p>
+
       <Row label="Areal weight (gsm)">
         <input value={areal} onChange={(e) => setAreal(e.target.value)} inputMode="decimal" />
       </Row>
+
       <Row label="Roll weight">
-        <div className="input-grid">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 100px", gap: 8 }}>
           <input value={rollWeight} onChange={(e) => setRollWeight(e.target.value)} inputMode="decimal" />
           <select value={rollWeightUnit} onChange={(e) => setRollWeightUnit(e.target.value as any)}>
             <option value="kg">kg</option>
@@ -155,8 +158,9 @@ function RollPane({ decimals }: { decimals: number }) {
           </select>
         </div>
       </Row>
+
       <Row label="Roll width">
-        <div className="input-grid">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 100px", gap: 8 }}>
           <input value={width} onChange={(e) => setWidth(e.target.value)} inputMode="decimal" />
           <select value={widthUnit} onChange={(e) => setWidthUnit(e.target.value as any)}>
             <option value="in">in</option>
@@ -166,20 +170,21 @@ function RollPane({ decimals }: { decimals: number }) {
           </select>
         </div>
       </Row>
+
       {out && (
         <Summary>
-          <li>Area: {fmt(out.area_m2, decimals)} m²</li>
-          <li>Length: {fmt(out.length_yd, decimals)} yd ({fmt(out.length_m, decimals)} m)</li>
+          <li>Area: {fmt(out.area_m2)} m²</li>
+          <li>Length: {fmt(out.length_yd)} yd ({fmt(out.length_m)} m)</li>
         </Summary>
       )}
     </div>
   );
 }
 
-/** ---------- 3) Catalyst % & volumes ---------- */
-function CatalystPane({ decimals }: { decimals: number }) {
-  const [percent, setPercent] = useState("1.5");
-  const [resinVal, setResinVal] = useState("1");
+/** ---------- 3) Catalyst percentage & volumes pane ---------- */
+function CatalystPane() {
+  const [percent, setPercent] = useState("1.5");              // % v/v
+  const [resinVal, setResinVal] = useState("1");              // amount of resin
   const [resinUnit, setResinUnit] = useState<"gal"|"qt"|"L"|"fl_oz">("gal");
 
   const calc = useMemo(() => {
@@ -194,23 +199,26 @@ function CatalystPane({ decimals }: { decimals: number }) {
                             v * OZFL_TO_ML;
 
     const cat_mL = resin_mL * (p / 100);
-    const cat_cc = cat_mL;
+    const cat_cc = cat_mL; // 1 mL = 1 cc
     const cat_fl_oz = cat_mL / OZFL_TO_ML;
 
-    const cc_per_gal = GAL_TO_ML * (p / 100);
-    const oz_per_gal = cc_per_gal / OZFL_TO_ML;
+    // Normalized dosing rates for reference (per gallon at the same %)
+    const cc_per_gal = GAL_TO_ML * (p / 100);     // ≈ 37.8541 * p
+    const oz_per_gal = cc_per_gal / OZFL_TO_ML;   // ≈ 1.2809 * p
 
     return { cat_mL, cat_cc, cat_fl_oz, cc_per_gal, oz_per_gal };
   }, [percent, resinVal, resinUnit]);
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
-      <p><strong>Catalyst by volume</strong></p>
+      <p><strong>Catalyst by volume</strong> (shop-friendly cc/gal and oz/gal)</p>
+
       <Row label="Catalyst % (v/v)">
         <input value={percent} onChange={(e) => setPercent(e.target.value)} inputMode="decimal" />
       </Row>
+
       <Row label="Resin amount">
-        <div className="input-grid">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 120px", gap: 8 }}>
           <input value={resinVal} onChange={(e) => setResinVal(e.target.value)} inputMode="decimal" />
           <select value={resinUnit} onChange={(e) => setResinUnit(e.target.value as any)}>
             <option value="gal">gal</option>
@@ -220,13 +228,14 @@ function CatalystPane({ decimals }: { decimals: number }) {
           </select>
         </div>
       </Row>
+
       {calc && (
         <>
           <Summary>
-            <li>For {resinVal} {resinUnit} at {percent}% → {fmt(calc.cat_cc, decimals)} cc ({fmt(calc.cat_fl_oz, decimals)} fl oz)</li>
+            <li>For {resinVal} {resinUnit} at {percent}% → {fmt(calc.cat_cc)} cc ({fmt(calc.cat_fl_oz)} fl oz)</li>
           </Summary>
           <small style={{ color: "#666" }}>
-            Reference dose: {fmt(calc.cc_per_gal, decimals)} cc/gal ≈ {fmt(calc.oz_per_gal, decimals)} oz/gal
+            Reference dosing rate (normalized): {fmt(calc.cc_per_gal)} cc/gal ≈ {fmt(calc.oz_per_gal)} oz/gal
           </small>
         </>
       )}
@@ -234,10 +243,10 @@ function CatalystPane({ decimals }: { decimals: number }) {
   );
 }
 
-/** ---- Layout helpers ---- */
+/** ---- Small layout helpers ---- */
 function Row(props: { label: string; children: React.ReactNode }) {
   return (
-    <label className="row">
+    <label style={{ display: "grid", gridTemplateColumns: "180px 1fr", alignItems: "center", gap: 12 }}>
       <span style={{ color: "#444" }}>{props.label}</span>
       <div>{props.children}</div>
     </label>

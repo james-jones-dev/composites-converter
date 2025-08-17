@@ -66,3 +66,27 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+main { padding: 12px; }
+
+/* Grids used in App.tsx */
+.input-grid {
+  display: grid;
+  grid-template-columns: 1fr 140px;
+  gap: 8px;
+}
+label.row {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+/* iPhone: stack on narrow screens */
+@media (max-width: 480px) {
+  label.row { grid-template-columns: 1fr; }
+  .input-grid { grid-template-columns: 1fr; }
+  button, select, input { width: 100%; }
+}
+
+/* Prevent iOS zoom-on-focus */
+input, select, button { font-size: 16px; }
