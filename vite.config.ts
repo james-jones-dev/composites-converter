@@ -11,10 +11,10 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg','robots.txt','apple-touch-icon.png'],
       manifest: {
-        name: 'Unit Converter',
+        name: 'Composites Converter',
         short_name: 'Converter',
         start_url: '/composites-converter/',
-        scope: '/composites-converter',
+        scope: '/composites-converter/',
         display: 'standalone',
         background_color: '#0b1220',
         theme_color: '#111827',
