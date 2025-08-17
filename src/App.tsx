@@ -84,8 +84,8 @@ function TextilePane({ decimals }: { decimals: number }) {
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
-      <p><strong>Convert GSM ⇄ oz/yd² ⇄ oz/ft²</strong></p>
-      <Row label="GSM">
+      <p><strong>Convert gsm ⇄ oz/yd² ⇄ oz/ft²</strong></p>
+      <Row label="gsm">
         <input
           value={source === "gsm" ? gsmStr : fmt(values.gsm, decimals)}
           onChange={(e) => { setSource("gsm"); setGsmStr(e.target.value); }}
