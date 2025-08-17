@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  base: '/composites-converter/', 
   plugins: [
     react(),
     VitePWA({
@@ -12,8 +13,8 @@ export default defineConfig({
       manifest: {
         name: 'Unit Converter',
         short_name: 'Converter',
-        start_url: '/',
-        scope: '/',
+        start_url: '/composites-converter/',
+        scope: '/composites-converter',
         display: 'standalone',
         background_color: '#0b1220',
         theme_color: '#111827',
