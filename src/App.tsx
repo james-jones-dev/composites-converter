@@ -168,8 +168,8 @@ function RollPane({ decimals }: { decimals: number }) {
       </Row>
       {out && (
         <Summary>
-          <li>Area: {fmt(out.area_m2, decimals)} m²</li>
-          <li>Length: {fmt(out.length_yd, decimals)} yd ({fmt(out.length_m, decimals)} m)</li>
+          <p>Area: {fmt(out.area_m2, decimals)} m²</p>
+          <p>Length: {fmt(out.length_yd, decimals)} yd ({fmt(out.length_m, decimals)} m)</p>
         </Summary>
       )}
     </div>
@@ -223,7 +223,7 @@ function CatalystPane({ decimals }: { decimals: number }) {
       {calc && (
         <>
           <Summary>
-            <li>For {resinVal} {resinUnit} at {percent}% → {fmt(calc.cat_cc, decimals)} cc ({fmt(calc.cat_fl_oz, decimals)} fl oz)</li>
+            <p>For {resinVal} {resinUnit} at {percent}% → {fmt(calc.cat_cc, decimals)} cc ({fmt(calc.cat_fl_oz, decimals)} fl oz)</p>
           </Summary>
           <small style={{ color: "#666" }}>
             Reference dose: {fmt(calc.cc_per_gal, decimals)} cc/gal ≈ {fmt(calc.oz_per_gal, decimals)} oz/gal
