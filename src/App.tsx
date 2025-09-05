@@ -107,7 +107,7 @@ function TextilePane({ decimals }: { decimals: number }) {
         />
       </Row>
       <Summary>
-        <li>{fmt(values.gsm, decimals)} gsm ≈ {fmt(values.oy, decimals)} oz/yd² ≈ {fmt(values.of, decimals)} oz/ft²</li>
+        <p>{fmt(values.gsm, decimals)} gsm ≈ {fmt(values.oy, decimals)} oz/yd² ≈ {fmt(values.of, decimals)} oz/ft²</p>
       </Summary>
     </div>
   );
